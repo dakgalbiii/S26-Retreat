@@ -12,7 +12,7 @@ import { Check, Circle } from "lucide-react";
 
 type Tab = "home" | "schedule" | "rules" | "groups" | "info";
 
-const UNLOCK_DATE = new Date("2026-03-13T20:00:00");
+const UNLOCK_DATE = new Date("2026-03-13T19:00:00");
 const PASSWORD_HASH = btoa("PMTisKindaChinese");
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
