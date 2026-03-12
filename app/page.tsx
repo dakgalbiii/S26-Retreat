@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Image       from "next/image";
-import BottomNav   from "./components/BottomNav";
-import HomeTab     from "./components/tabs/HomeTab";
+import Image from "next/image";
+import BottomNav from "./components/BottomNav";
+import HomeTab from "./components/tabs/HomeTab";
 import ScheduleTab from "./components/tabs/ScheduleTab";
-import RulesTab    from "./components/tabs/RulesTab";
-import GroupsTab   from "./components/tabs/GroupsTab";
-import InfoTab     from "./components/tabs/InfoTab";
+import RulesTab from "./components/tabs/RulesTab";
+import GroupsTab from "./components/tabs/GroupsTab";
+import InfoTab from "./components/tabs/InfoTab";
 
 type Tab = "home" | "schedule" | "rules" | "groups" | "info";
 
@@ -24,8 +24,8 @@ const STORAGE_KEYS = {
 };
 
 export default function Page() {
-  const [tab, setTab]         = useState<Tab>("home");
-  const [now, setNow]         = useState<Date>(() => new Date());
+  const [tab, setTab] = useState<Tab>("home");
+  const [now, setNow] = useState<Date>(() => new Date());
   const [mounted, setMounted] = useState(false);
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -34,7 +34,7 @@ export default function Page() {
   const [attempts, setAttempts] = useState(0);
   const [isLockedOut, setIsLockedOut] = useState(false);
   const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
-  
+
   // Refs to prevent multiple submissions
   const isSubmitting = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,19 +43,19 @@ export default function Page() {
   useEffect(() => {
     setMounted(true);
     setNow(new Date());
-    
+
     // Load authentication state
     const savedAuth = localStorage.getItem(STORAGE_KEYS.AUTHENTICATED);
     if (savedAuth === 'true') {
       setIsAuthenticated(true);
     }
-    
+
     // Load attempts
     const savedAttempts = localStorage.getItem(STORAGE_KEYS.ATTEMPTS);
     if (savedAttempts) {
       setAttempts(parseInt(savedAttempts, 10));
     }
-    
+
     // Load lockout
     const savedLockout = localStorage.getItem(STORAGE_KEYS.LOCKOUT_UNTIL);
     if (savedLockout) {
@@ -69,7 +69,7 @@ export default function Page() {
         localStorage.removeItem(STORAGE_KEYS.ATTEMPTS);
       }
     }
-    
+
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
@@ -127,13 +127,13 @@ export default function Page() {
 
   const handlePasswordSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent double submission
     if (isSubmitting.current) return;
-    
+
     // Check lockout
     if (isLockedOut) {
-      const minutesLeft = lockoutUntil ? 
+      const minutesLeft = lockoutUntil ?
         Math.ceil((lockoutUntil.getTime() - Date.now()) / 60000) : 15;
       setError(`Too many attempts. Try again in ${minutesLeft} minutes.`);
       return;
@@ -141,7 +141,7 @@ export default function Page() {
 
     // Sanitize input
     const sanitizedPassword = sanitizeInput(password);
-    
+
     // Check if password is empty after sanitization
     if (!sanitizedPassword) {
       setError("Password cannot be empty");
@@ -154,7 +154,7 @@ export default function Page() {
     setTimeout(() => {
       // Compare hash instead of plaintext
       const isCorrect = btoa(sanitizedPassword) === PASSWORD_HASH;
-      
+
       if (isCorrect) {
         // Success - reset all security states
         setIsAuthenticated(true);
@@ -168,7 +168,7 @@ export default function Page() {
         // Failed attempt
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
-        
+
         if (newAttempts >= MAX_ATTEMPTS) {
           // Lock out
           const lockoutTime = new Date(Date.now() + LOCKOUT_TIME);
@@ -178,16 +178,16 @@ export default function Page() {
         } else {
           setError(`Invalid password. ${MAX_ATTEMPTS - newAttempts} attempts remaining.`);
         }
-        
+
         // Clear password field
         setPassword("");
-        
+
         // Focus input for retry
         if (inputRef.current) {
           inputRef.current.focus();
         }
       }
-      
+
       isSubmitting.current = false;
     }, Math.random() * 200 + 100); // Random delay to prevent timing attacks
   }, [password, attempts, isLockedOut, lockoutUntil]);
@@ -210,13 +210,13 @@ export default function Page() {
   // ── Pre-retreat lock screen — same layout as HomeTab ──
   if (isLocked) {
     const diffMs = UNLOCK_DATE.getTime() - now.getTime();
-    
+
     // Calculate time units
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-    
+
     // Format countdown with leading zeros
     const formatWithLeadingZeros = (num: number): string => {
       return num.toString().padStart(2, '0');
@@ -254,10 +254,10 @@ export default function Page() {
     };
 
     return (
-      <div className="max-w-lg mx-auto flex flex-col justify-between min-h-[100dvh] px-7 pt-16 pb-10">
+      <div className="max-w-lg mx-auto flex flex-col justify-between min-h-dvh px-7 pt-16 pb-10">
 
         {/* Top — mirrors HomeTab top block */}
-        <div className="fade-up delay-1">
+        <div className="fade-up delay-1 mb-2">
           <p className="text-[10px] tracking-widest2 uppercase text-brown/35 mb-8">
             KCF · Mar 13-15, 2026
           </p>
@@ -268,18 +268,18 @@ export default function Page() {
           </h1>
 
           <div className="my-3 w-full flex justify-center items-center">
-            <Image 
-              src="/running.png" 
-              alt="The Kingdom" 
-              width={350} 
+            <Image
+              src="/running.png"
+              alt="The Kingdom"
+              width={350}
               height={250}
               priority
             />
           </div>
 
-          <span className="text-[13px] text-brown/45 leading-relaxed font-light">
+          <span className="text-[14px] text-brown/45 leading-relaxed font-light">
             "But seek first his kingdom and his righteousness, and all these things will be given to you."
-            Matthew 6:33
+            <br />Matthew 6:33
           </span>
         </div>
 
@@ -291,7 +291,7 @@ export default function Page() {
             </span>
             {getCountdownDisplay()}
           </div>
-          
+
           {/* Password protection section */}
           {!showPasswordInput ? (
             <button
@@ -360,7 +360,7 @@ export default function Page() {
               </div>
             </form>
           )}
-          
+
           <div className="flex items-center justify-between py-[14px] border-t border-b border-brown/10">
             <span className="text-sm text-brown/45 font-light">
               Unlocks Mar 13 at 8:00 PM
@@ -375,14 +375,14 @@ export default function Page() {
   return (
     <div className="max-w-lg mx-auto min-h-screen relative">
       <main key={tab}>
-        {tab === "home"     && <HomeTab onNavigate={handleNav} />}
+        {tab === "home" && <HomeTab onNavigate={handleNav} />}
         {tab === "schedule" && <ScheduleTab />}
-        {tab === "rules"    && <RulesTab />}
-        {tab === "groups"   && <GroupsTab />}
-        {tab === "info"     && <InfoTab now={now} />}
+        {tab === "rules" && <RulesTab />}
+        {tab === "groups" && <GroupsTab />}
+        {tab === "info" && <InfoTab now={now} />}
       </main>
       <BottomNav active={tab} onChange={(t) => handleNav(t)} />
-      
+
       {/* Optional: Add logout button for testing (remove in production) */}
       {process.env.NODE_ENV === 'development' && isAuthenticated && (
         <button

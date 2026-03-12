@@ -30,7 +30,7 @@ export default function HomeTab({ onNavigate }: Props) {
             loading="eager"
           />        </div>
 
-        <span className="text-[13px]text-brown/45 leading-relaxed font-light">
+        <span className="text-[14px] text-brown/45 leading-relaxed font-light">
           "But seek first his kingdom and his righteousness, and all these things will be given to you."
           <br />Matthew 6:33
         </span>
