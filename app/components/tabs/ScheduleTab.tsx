@@ -16,7 +16,7 @@ const CATEGORY: Record<string, { bg: string; border: string; text: string }> = {
   session: { bg: "#e8f0e4", border: "#4a7c59", text: "#2a4d35" },
   prayer:  { bg: "#fdf3dc", border: "#b8872a", text: "#7a5a10" },
   groups:  { bg: "#e8eaf6", border: "#5c6bc0", text: "#3a4a8a" },
-  meal:    { bg: "#fce8e8", border: "#c0715c", text: "#8a3a2a" },
+  meal:    { bg: "#f7efe5", border: "#b38b5d", text: "#6b4f2f" }, // Warm beige/brown instead of red
   free:    { bg: "#f0f0f0", border: "#9e9e9e", text: "#555555" },
   default: { bg: "#f5f0eb", border: "#a89070", text: "#5a4030" },
 };

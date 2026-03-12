@@ -11,7 +11,7 @@ import InfoTab from "./components/tabs/InfoTab";
 
 type Tab = "home" | "schedule" | "rules" | "groups" | "info";
 
-const UNLOCK_DATE = new Date("2026-03-13T20:00:00");
+const UNLOCK_DATE = new Date("2026-03-13T19:00:00");
 const PASSWORD_HASH = btoa("PMTisKindaChinese");
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -379,7 +379,7 @@ export default function Page() {
 
           <div className="flex items-center justify-between py-[14px] border-t border-b border-brown/10">
             <span className="text-sm text-brown/45 font-light">
-              Unlocks Mar 13 at 8:00 PM
+              Unlocks Mar 13 at 7:00 PM
             </span>
           </div>
         </div>
