@@ -4,12 +4,12 @@ import { Home, ScrollText, Info, Calendar, Grid, DoorOpen } from "lucide-react";
 type Tab = "home" | "schedule" | "rules" | "groups" | "info" | "rooms";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "home",     label: "Home",     icon: Home },
-  { id: "rules",    label: "Rules",    icon: ScrollText },
-  { id: "info",     label: "Info",     icon: Info },
+  { id: "home", label: "Home", icon: Home },
+  { id: "rules", label: "Rules", icon: ScrollText },
+  { id: "info", label: "Info", icon: Info },
   { id: "schedule", label: "Schedule", icon: Calendar },
-  { id: "groups",   label: "Groups",   icon: Grid },
-  { id: "rooms",    label: "Rooms",    icon: DoorOpen },
+  { id: "groups", label: "Groups", icon: Grid },
+  { id: "rooms", label: "Rooms", icon: DoorOpen },
 ];
 
 type Props = {
@@ -28,15 +28,13 @@ export default function BottomNav({ active, onChange }: Props) {
             <button
               key={id}
               onClick={() => onChange(id)}
-              className={`relative flex flex-col items-center justify-center gap-1 min-w-11 py-1 rounded-lg transition-all duration-200 ${
-                isActive ? " " : " text-brown/30 hover:bg-brown/5 hover:text-brown/50 "
-              }`}
+              className={`relative flex flex-col items-center justify-center gap-1 min-w-11 py-1 rounded-lg transition-all duration-200 ${isActive ? " " : " text-brown/30 hover:bg-brown/5 hover:text-brown/50 "
+                }`}
             >
-              <Icon 
-                size={18} 
-                className={`transition-transform duration-200 ${
-                  isActive ? "scale-110" : ""
-                }`} 
+              <Icon
+                size={18}
+                className={`transition-transform duration-200 ${isActive ? "scale-110" : ""
+                  }`}
               />
               <span className="text-[8px] tracking-widest uppercase leading-none">
                 {label}
