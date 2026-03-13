@@ -1,7 +1,7 @@
 "use client";
-import { Home, ScrollText, Info, Calendar, Grid } from "lucide-react";
+import { Home, ScrollText, Info, Calendar, Grid, DoorOpen } from "lucide-react";
 
-type Tab = "home" | "schedule" | "rules" | "groups" | "info";
+type Tab = "home" | "schedule" | "rules" | "groups" | "info" | "rooms";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "home",     label: "Home",     icon: Home },
@@ -9,6 +9,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "info",     label: "Info",     icon: Info },
   { id: "schedule", label: "Schedule", icon: Calendar },
   { id: "groups",   label: "Groups",   icon: Grid },
+  { id: "rooms",    label: "Rooms",    icon: DoorOpen },
 ];
 
 type Props = {
@@ -28,7 +29,7 @@ export default function BottomNav({ active, onChange }: Props) {
               key={id}
               onClick={() => onChange(id)}
               className={`relative flex flex-col items-center justify-center gap-1 min-w-11 py-1 rounded-lg transition-all duration-200 ${
-                isActive ? " bg-brown text-paper " : " text-brown/30 hover:bg-brown/5 hover:text-brown/50 "
+                isActive ? " " : " text-brown/30 hover:bg-brown/5 hover:text-brown/50 "
               }`}
             >
               <Icon 

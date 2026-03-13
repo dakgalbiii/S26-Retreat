@@ -8,9 +8,10 @@ import ScheduleTab from "./components/tabs/ScheduleTab";
 import RulesTab from "./components/tabs/RulesTab";
 import GroupsTab from "./components/tabs/GroupsTab";
 import InfoTab from "./components/tabs/InfoTab";
+import RoomsTab from "./components/tabs/RoomTab";
 import { Check, Circle } from "lucide-react";
 
-type Tab = "home" | "schedule" | "rules" | "groups" | "info";
+type Tab = "home" | "schedule" | "rules" | "groups" | "info" | "rooms";
 
 const UNLOCK_DATE = new Date("2026-03-13T19:00:00");
 const PASSWORD_HASH = btoa("PMTisKindaChinese");
@@ -153,7 +154,7 @@ export default function Page() {
 
   function handleNav(t: string) {
     // Validate tab parameter
-    const validTabs: Tab[] = ["home", "schedule", "rules", "groups", "info"];
+    const validTabs: Tab[] = ["home", "schedule", "rules", "groups", "info", "rooms"];
     if (validTabs.includes(t as Tab)) {
       setTab(t as Tab);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -526,6 +527,7 @@ export default function Page() {
         {tab === "rules" && <RulesTab />}
         {tab === "groups" && <GroupsTab />}
         {tab === "info" && <InfoTab now={now} />}
+        {tab === "rooms" && <RoomsTab />}
       </main>
       <BottomNav active={tab} onChange={(t) => handleNav(t)} />
 

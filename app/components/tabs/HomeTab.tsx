@@ -43,6 +43,7 @@ export default function HomeTab({ onNavigate }: Props) {
           { label: "Info", tab: "info" },
           { label: "Schedule", tab: "schedule" },
           { label: "Small Groups", tab: "groups" },
+          { label: "Room Assignments", tab: "rooms" },
         ].map(({ label, tab }) => (
           <button
             key={tab}
