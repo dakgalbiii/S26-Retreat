@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { schedule } from "../../lib/schedule";
+import { CalendarDays } from "lucide-react";
 
 const DAY_LABELS = ["Fri", "Sat", "Sun"];
 
@@ -105,11 +106,71 @@ function formatCountdown(diffMs: number): string {
 export default function ScheduleTab() {
   const [activeDay, setActiveDay] = useState(0);
   const [now, setNow] = useState<Date>(() => new Date());
+  const [showJumpButton, setShowJumpButton] = useState(false);
+  const scheduleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(id);
   }, []);
+
+  // Determine current day based on date
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to midnight for date comparison
+    
+    // Find which retreat day matches today's date
+    let currentDayIndex = -1;
+    for (let i = 0; i < RETREAT_DATES.length; i++) {
+      const retreatDate = new Date(RETREAT_DATES[i]);
+      retreatDate.setHours(0, 0, 0, 0);
+      
+      if (retreatDate.getTime() === today.getTime()) {
+        currentDayIndex = i;
+        break;
+      }
+    }
+    
+    // If we're on a retreat day, set it as active
+    if (currentDayIndex !== -1) {
+      setActiveDay(currentDayIndex);
+      setShowJumpButton(false);
+    } else {
+      // If we're not on a retreat day, check if we're before or after
+      const firstDay = new Date(RETREAT_DATES[0]);
+      firstDay.setHours(0, 0, 0, 0);
+      
+      if (today < firstDay) {
+        // Before retreat - show Friday
+        setActiveDay(0);
+        setShowJumpButton(false);
+      } else {
+        // After retreat - show that we're done, but allow jumping to any day
+        setShowJumpButton(true);
+      }
+    }
+  }, []); // Run once on mount
+
+  const jumpToToday = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < RETREAT_DATES.length; i++) {
+      const retreatDate = new Date(RETREAT_DATES[i]);
+      retreatDate.setHours(0, 0, 0, 0);
+      
+      if (retreatDate.getTime() === today.getTime()) {
+        setActiveDay(i);
+        setShowJumpButton(false);
+        
+        // Smooth scroll to schedule
+        setTimeout(() => {
+          scheduleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+        break;
+      }
+    }
+  };
 
   const day = schedule[activeDay];
 
@@ -148,7 +209,7 @@ export default function ScheduleTab() {
   const bannerCountdown = formatCountdown(bannerDiffMs);
 
   return (
-    <div className="flex flex-col h-dvh">
+    <div className="flex flex-col h-dvh" ref={scheduleRef}>
 
       {/* Header */}
       <div className="px-5 pt-10 pb-3 shrink-0 fade-up delay-1">
@@ -158,6 +219,17 @@ export default function ScheduleTab() {
         <h2 className="text-[28px] font-medium tracking-tight leading-none mb-4" style={{ color: "#2c1a0e" }}>
           Schedule
         </h2>
+
+        {/* Jump to Today button - only shows when not on current day */}
+        {showJumpButton && (
+          <button
+            onClick={jumpToToday}
+            className="mb-4 w-full py-2 px-3 bg-gold/10 border border-gold/30 rounded-lg flex items-center justify-center gap-2 text-sm text-brown/70 hover:bg-gold/20 transition-colors"
+          >
+            <CalendarDays size={16} className="text-gold" />
+            <span>Jump to today's schedule</span>
+          </button>
+        )}
 
         {/* Countdown banner */}
         {bannerEvt && bannerColors && (
@@ -191,22 +263,37 @@ export default function ScheduleTab() {
           </div>
         )}
 
-        {/* Day switcher */}
+        {/* Day switcher with current day indicator */}
         <div className="flex gap-1 mb-3">
           {schedule.map((d, i) => {
             const isActive = activeDay === i;
+            
+            // Check if this day is today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const retreatDate = new Date(RETREAT_DATES[i]);
+            retreatDate.setHours(0, 0, 0, 0);
+            const isToday = retreatDate.getTime() === today.getTime();
+            
             return (
               <button
                 key={d.date}
                 onClick={() => setActiveDay(i)}
-                className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg transition-all duration-150"
-                style={{ background: isActive ? "#2c1a0e" : "transparent" }}
+                className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg transition-all duration-150 relative"
+                style={{ 
+                  background: isActive ? "#2c1a0e" : "transparent",
+                  border: isToday && !isActive ? "1px solid rgba(180, 150, 100, 0.3)" : "none"
+                }}
               >
+                {isToday && !isActive && (
+                  <span className="absolute -top-1 right-1 w-1.5 h-1.5 rounded-full bg-gold" />
+                )}
                 <span
                   className="text-[9px] tracking-widest uppercase leading-none"
                   style={{ color: isActive ? "rgba(242,237,228,0.6)" : "rgba(44,26,14,0.35)" }}
                 >
                   {DAY_LABELS[i]}
+                  {isToday && !isActive && " •"}
                 </span>
                 <span
                   className="text-[18px] font-medium leading-none"
@@ -225,6 +312,9 @@ export default function ScheduleTab() {
         <div className="flex items-center gap-3 mb-3">
           <span className="text-[10px] font-medium" style={{ color: "rgba(44,26,14,0.40)" }}>
             {day.day} · {day.date}
+            {new Date(RETREAT_DATES[activeDay]).setHours(0,0,0,0) === new Date().setHours(0,0,0,0) && (
+              <span className="ml-2 text-[8px] text-gold">(Today)</span>
+            )}
           </span>
           <div className="flex-1 h-px" style={{ background: "rgba(44,26,14,0.07)" }} />
         </div>
