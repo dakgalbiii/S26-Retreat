@@ -80,7 +80,7 @@ function getEventDate(dayIdx: number, timeStr: string): Date {
   const hrs = Math.floor(sh);
   const min = Math.round((sh - Math.floor(sh)) * 60);
 
-  const base = new Date(RETREAT_DATES[dayIdx]);
+  const base = RETREAT_DATES[dayIdx] ?? new Date();
   // If hour >= 24 it's past midnight — bump to next calendar day
   if (hrs >= 24) {
     base.setDate(base.getDate() + 1);
@@ -103,7 +103,7 @@ function formatCountdown(diffMs: number): string {
   return `${mins}m`;
 }
 
-export default function ScheduleTab() {
+export default function ScheduleTab({ eventId }: { eventId: string }) {
   const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState(0);
@@ -116,16 +116,20 @@ export default function ScheduleTab() {
       const { data, error } = await supabase
         .from('schedule_blocks')
         .select('*')
-        .eq('event_id', '71cc0138-8888-4a28-87ad-5f02fec137d9')
+        .eq('event_id', eventId)
         .order('day')
         .order('position')
 
       if (error) { console.error(error); return; }
 
-      const days: ScheduleDay[] = [
-        { day: 'Saturday', date: 'Apr 18', items: [] },
-        { day: 'Sunday', date: 'Apr 19', items: [] },
-      ]
+      const maxDay = Math.max(...data.map((b: any) => b.day))
+
+      const days: ScheduleDay[] = Array.from({ length: maxDay }, (_, i) => ({
+        day: `Day ${i + 1}`,
+        date: '',
+        items: [],
+      }))
+
       for (const block of data) {
         days[block.day - 1].items.push({
           time: block.start_time,
@@ -251,6 +255,7 @@ export default function ScheduleTab() {
         {/* Jump to Today button - only shows when not on current day */}
         {showJumpButton && (
           <button
+            id="today"
             onClick={jumpToToday}
             className="mb-4 w-full py-2 px-3 bg-gold/10 border border-gold/30 rounded-lg flex items-center justify-center gap-2 text-sm text-brown/70 hover:bg-gold/20 transition-colors"
           >
@@ -305,7 +310,8 @@ export default function ScheduleTab() {
 
             return (
               <button
-                key={d.date}
+                id={`day-${i}`}
+                key={`day-btn-${i}`}
                 onClick={() => setActiveDay(i)}
                 className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg transition-all duration-150 relative"
                 style={{

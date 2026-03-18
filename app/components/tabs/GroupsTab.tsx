@@ -9,7 +9,7 @@ type SmallGroup = {
   members: string[];
 }
 
-export default function GroupsTab() {
+export default function GroupsTab({ eventId }: { eventId: string }) {
   const [groups, setGroups] = useState<SmallGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -21,7 +21,7 @@ export default function GroupsTab() {
       const { data: groupRows, error: groupError } = await supabase
         .from('groups')
         .select('id, name')
-        .eq('event_id', '71cc0138-8888-4a28-87ad-5f02fec137d9')
+        .eq('event_id', eventId)
         .order('position')
 
       if (groupError) { console.error(groupError); return; }

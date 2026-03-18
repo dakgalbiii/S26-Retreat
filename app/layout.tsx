@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Seek First The Kingdom · KCF Spring Retreat 2026",
-  description: "Seek first the kingdom. Matthew 6:33",
+  title: "Eventify",
+  description: "Create and manage your events with ease.",
   viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
   icons: {
     icon: '/running.png',
