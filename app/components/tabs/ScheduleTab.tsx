@@ -1,34 +1,34 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { schedule } from "../../lib/schedule";
+import { supabase } from "../../lib/supabase";
 import { CalendarDays } from "lucide-react";
+import { ScheduleDay, ScheduleItem } from "@/app/lib/schedule";
 
-const DAY_LABELS = ["Fri", "Sat", "Sun"];
+const DAY_LABELS = ["Sat", "Sun"];
 
 // Use local time strings (no UTC shift) — "2026-03-13T00:00:00" parses as LOCAL midnight
 const RETREAT_DATES = [
-  new Date("2026-03-13T00:00:00"),
-  new Date("2026-03-14T00:00:00"),
-  new Date("2026-03-15T00:00:00"),
+  new Date("2026-04-18T00:00:00"),
+  new Date("2026-04-19T00:00:00"),
 ];
 
 const CATEGORY: Record<string, { bg: string; border: string; text: string }> = {
   session: { bg: "#e8f0e4", border: "#4a7c59", text: "#2a4d35" },
-  prayer:  { bg: "#fdf3dc", border: "#b8872a", text: "#7a5a10" },
-  groups:  { bg: "#e8eaf6", border: "#5c6bc0", text: "#3a4a8a" },
-  meal:    { bg: "#f7efe5", border: "#b38b5d", text: "#6b4f2f" },
-  free:    { bg: "#f0f0f0", border: "#9e9e9e", text: "#555555" },
+  prayer: { bg: "#fdf3dc", border: "#b8872a", text: "#7a5a10" },
+  groups: { bg: "#e8eaf6", border: "#5c6bc0", text: "#3a4a8a" },
+  meal: { bg: "#f7efe5", border: "#b38b5d", text: "#6b4f2f" },
+  free: { bg: "#f0f0f0", border: "#9e9e9e", text: "#555555" },
   default: { bg: "#f5f0eb", border: "#a89070", text: "#5a4030" },
 };
 
 function getCat(title: string) {
   const t = title.toLowerCase();
-  if (t.includes("session"))                                                    return "session";
-  if (t.includes("prayer"))                                                     return "prayer";
-  if (t.includes("small group") || t.includes("group"))                        return "groups";
-  if (t.includes("breakfast") || t.includes("lunch") || t.includes("dinner"))  return "meal";
-  if (t.includes("free") || t.includes("game") || t.includes("rest"))          return "free";
+  if (t.includes("session")) return "session";
+  if (t.includes("prayer")) return "prayer";
+  if (t.includes("small group") || t.includes("group")) return "groups";
+  if (t.includes("breakfast") || t.includes("lunch") || t.includes("dinner")) return "meal";
+  if (t.includes("free") || t.includes("game") || t.includes("rest")) return "free";
   return "default";
 }
 
@@ -52,7 +52,7 @@ function splitTimeParts(raw: string): [string, string] | null {
   const idx = normalized.indexOf("–");
   if (idx === -1) return null;
   const startRaw = normalized.slice(0, idx).trim();
-  const endRaw   = normalized.slice(idx + 1).trim();
+  const endRaw = normalized.slice(idx + 1).trim();
 
   // If start has no am/pm but end does, inherit it
   const hasPeriod = (s: string) => /am|pm/i.test(s);
@@ -66,7 +66,7 @@ function parseDuration(raw: string): number {
   const parts = splitTimeParts(raw);
   if (!parts) return 0.5;
   const s = parseHour(parts[0]);
-  let e   = parseHour(parts[1]);
+  let e = parseHour(parts[1]);
   if (e <= s) e += 24; // crosses midnight (e.g. 11pm–1am)
   return Math.max(e - s, 0.25);
 }
@@ -76,7 +76,7 @@ function getEventDate(dayIdx: number, timeStr: string): Date {
   const parts = splitTimeParts(timeStr);
   if (!parts) return new Date(RETREAT_DATES[dayIdx]);
 
-  const sh  = parseHour(parts[0]);
+  const sh = parseHour(parts[0]);
   const hrs = Math.floor(sh);
   const min = Math.round((sh - Math.floor(sh)) * 60);
 
@@ -94,75 +94,103 @@ function getEventDate(dayIdx: number, timeStr: string): Date {
 function formatCountdown(diffMs: number): string {
   if (diffMs <= 0) return "";
   const totalMins = Math.floor(diffMs / 60000);
-  const days  = Math.floor(totalMins / 1440);
+  const days = Math.floor(totalMins / 1440);
   const hours = Math.floor((totalMins % 1440) / 60);
-  const mins  = totalMins % 60;
-  if (days > 0)               return `${days}d ${hours}h`;
-  if (hours > 0 && mins > 0)  return `${hours}h ${mins}m`;
-  if (hours > 0)              return `${hours}h`;
+  const mins = totalMins % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
+  if (hours > 0) return `${hours}h`;
   return `${mins}m`;
 }
 
 export default function ScheduleTab() {
+  const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState(0);
   const [now, setNow] = useState<Date>(() => new Date());
   const [showJumpButton, setShowJumpButton] = useState(false);
   const scheduleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    async function fetchSchedule() {
+      const { data, error } = await supabase
+        .from('schedule_blocks')
+        .select('*')
+        .eq('event_id', '71cc0138-8888-4a28-87ad-5f02fec137d9')
+        .order('day')
+        .order('position')
+
+      if (error) { console.error(error); return; }
+
+      const days: ScheduleDay[] = [
+        { day: 'Saturday', date: 'Apr 18', items: [] },
+        { day: 'Sunday', date: 'Apr 19', items: [] },
+      ]
+      for (const block of data) {
+        days[block.day - 1].items.push({
+          time: block.start_time,
+          title: block.title,
+          subtitle: block.description ?? undefined,
+          highlight: block.category === 'Session',
+        })
+      }
+
+      setSchedule(days)
+      setLoading(false)
+    }
+    fetchSchedule()
+  }, [])
+
+  useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(id);
   }, []);
 
-  // Determine current day based on date
   useEffect(() => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset to midnight for date comparison
-    
-    // Find which retreat day matches today's date
+    today.setHours(0, 0, 0, 0);
+
     let currentDayIndex = -1;
     for (let i = 0; i < RETREAT_DATES.length; i++) {
       const retreatDate = new Date(RETREAT_DATES[i]);
       retreatDate.setHours(0, 0, 0, 0);
-      
       if (retreatDate.getTime() === today.getTime()) {
         currentDayIndex = i;
         break;
       }
     }
-    
-    // If we're on a retreat day, set it as active
+
     if (currentDayIndex !== -1) {
       setActiveDay(currentDayIndex);
       setShowJumpButton(false);
     } else {
-      // If we're not on a retreat day, check if we're before or after
       const firstDay = new Date(RETREAT_DATES[0]);
       firstDay.setHours(0, 0, 0, 0);
-      
       if (today < firstDay) {
-        // Before retreat - show Friday
         setActiveDay(0);
         setShowJumpButton(false);
       } else {
-        // After retreat - show that we're done, but allow jumping to any day
         setShowJumpButton(true);
       }
     }
-  }, []); // Run once on mount
+  }, []);
+
+  // ✅ Early returns AFTER all hooks
+  if (loading) return <div className="flex h-dvh items-center justify-center text-sm" style={{ color: 'rgba(44,26,14,0.4)' }}>Loading...</div>
+  if (!schedule.length) return null
 
   const jumpToToday = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     for (let i = 0; i < RETREAT_DATES.length; i++) {
       const retreatDate = new Date(RETREAT_DATES[i]);
       retreatDate.setHours(0, 0, 0, 0);
-      
+
       if (retreatDate.getTime() === today.getTime()) {
         setActiveDay(i);
         setShowJumpButton(false);
-        
+
         // Smooth scroll to schedule
         setTimeout(() => {
           scheduleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -182,8 +210,8 @@ export default function ScheduleTab() {
     for (let di = 0; di < schedule.length; di++) {
       for (const item of schedule[di].items) {
         const start = getEventDate(di, item.time);
-        const dur   = parseDuration(item.time);
-        const end   = new Date(start.getTime() + dur * 3600 * 1000);
+        const dur = parseDuration(item.time);
+        const end = new Date(start.getTime() + dur * 3600 * 1000);
 
         if (!current && start <= now && now < end) {
           current = { title: item.title, time: item.time, endsAt: end, cat: getCat(item.title) };
@@ -198,8 +226,8 @@ export default function ScheduleTab() {
     return { currentEvent: current, nextEvent: next };
   })();
 
-  const bannerEvt    = currentEvent ?? nextEvent;
-  const isCurrent    = !!currentEvent;
+  const bannerEvt = currentEvent ?? nextEvent;
+  const isCurrent = !!currentEvent;
   const bannerColors = bannerEvt ? CATEGORY[bannerEvt.cat] : null;
   const bannerDiffMs = bannerEvt
     ? isCurrent
@@ -267,20 +295,20 @@ export default function ScheduleTab() {
         <div className="flex gap-1 mb-3">
           {schedule.map((d, i) => {
             const isActive = activeDay === i;
-            
+
             // Check if this day is today
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const retreatDate = new Date(RETREAT_DATES[i]);
             retreatDate.setHours(0, 0, 0, 0);
             const isToday = retreatDate.getTime() === today.getTime();
-            
+
             return (
               <button
                 key={d.date}
                 onClick={() => setActiveDay(i)}
                 className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg transition-all duration-150 relative"
-                style={{ 
+                style={{
                   background: isActive ? "#2c1a0e" : "transparent",
                   border: isToday && !isActive ? "1px solid rgba(180, 150, 100, 0.3)" : "none"
                 }}
@@ -312,7 +340,7 @@ export default function ScheduleTab() {
         <div className="flex items-center gap-3 mb-3">
           <span className="text-[10px] font-medium" style={{ color: "rgba(44,26,14,0.40)" }}>
             {day.day} · {day.date}
-            {new Date(RETREAT_DATES[activeDay]).setHours(0,0,0,0) === new Date().setHours(0,0,0,0) && (
+            {new Date(RETREAT_DATES[activeDay]).setHours(0, 0, 0, 0) === new Date().setHours(0, 0, 0, 0) && (
               <span className="ml-2 text-[8px] text-gold">(Today)</span>
             )}
           </span>
@@ -321,14 +349,14 @@ export default function ScheduleTab() {
 
         <div className="space-y-1.5">
           {day.items.map((item, i) => {
-            const cat        = getCat(item.title);
-            const colors     = CATEGORY[cat];
+            const cat = getCat(item.title);
+            const colors = CATEGORY[cat];
             const eventStart = getEventDate(activeDay, item.time);
-            const dur        = parseDuration(item.time);
-            const eventEnd   = new Date(eventStart.getTime() + dur * 3600 * 1000);
-            const isPast     = eventEnd < now;
-            const isNow      = eventStart <= now && now < eventEnd;
-            const isNext     = !isNow && eventStart > now &&
+            const dur = parseDuration(item.time);
+            const eventEnd = new Date(eventStart.getTime() + dur * 3600 * 1000);
+            const isPast = eventEnd < now;
+            const isNow = eventStart <= now && now < eventEnd;
+            const isNext = !isNow && eventStart > now &&
               nextEvent?.title === item.title &&
               nextEvent?.dayIdx === activeDay;
 
@@ -360,7 +388,7 @@ export default function ScheduleTab() {
                       <span className="text-[12px] font-medium truncate leading-tight" style={{ color: colors.text }}>
                         {item.title}
                       </span>
-                      
+
                     </div>
                     {item.subtitle && (
                       <p className="text-[10px] mt-0.5 leading-snug" style={{ color: colors.text + "88" }}>
