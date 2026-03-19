@@ -3,38 +3,31 @@
 import { useEffect, useState } from "react";
 import { createClient } from "../../../lib/supabase-client";
 import { useRouter, useParams } from "next/navigation";
+import { useTheme, tokens, inputStyle } from "../../theme-context";
+import { Trash2, ExternalLink, Plus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-type Link = {
-  id: string;
-  label: string;
-  url: string;
-  position: number;
-}
+type Link = { id: string; label: string; url: string; position: number; }
 
 export default function LinksEditorPage() {
-  const [links, setLinks] = useState<Link[]>([]);
+  const [links, setLinks]     = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
-  const [label, setLabel] = useState("");
-  const [url, setUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-  const router = useRouter();
-  const { id } = useParams();
+  const [label, setLabel]     = useState("");
+  const [url, setUrl]         = useState("");
+  const [saving, setSaving]   = useState(false);
+  const router   = useRouter();
+  const { id }   = useParams();
   const supabase = createClient();
+  const { theme } = useTheme();
+  const t = tokens(theme);
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/dashboard/login"); return; }
-
-      const { data, error } = await supabase
-        .from('links')
-        .select('*')
-        .eq('event_id', id)
-        .order('position')
-
+      const { data, error } = await supabase.from('links').select('*').eq('event_id', id).order('position')
       if (error) { console.error(error); return; }
-      setLinks(data ?? [])
-      setLoading(false)
+      setLinks(data ?? []); setLoading(false)
     }
     load()
   }, [])
@@ -43,108 +36,115 @@ export default function LinksEditorPage() {
     e.preventDefault()
     if (!label || !url) return
     setSaving(true)
-
     const { data, error } = await supabase
-      .from('links')
-      .insert({ event_id: id, label, url, position: links.length })
-      .select()
-      .single()
-
+      .from('links').insert({ event_id: id, label, url, position: links.length }).select().single()
     if (error) { console.error(error); setSaving(false); return; }
-    setLinks([...links, data])
-    setLabel("")
-    setUrl("")
-    setSaving(false)
+    setLinks([...links, data]); setLabel(""); setUrl(""); setSaving(false)
   }
 
   async function handleDelete(linkId: string) {
     await supabase.from('links').delete().eq('id', linkId)
-    setLinks(links.filter((l) => l.id !== linkId))
+    setLinks(links.filter(l => l.id !== linkId))
   }
 
+  const lbl = { color: t.textSub, fontSize: "13px", fontWeight: 500 } as React.CSSProperties
+
   if (loading) return (
-    <div className="flex h-screen items-center justify-center text-sm text-brown/40">
-      Loading...
-    </div>
+    <div className="flex h-full items-center justify-center" style={{ color: t.textSub }}>Loading...</div>
   )
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12">
-      <div className="mb-8">
-        <button
-          onClick={() => router.push(`/dashboard/${id}`)}
-          className="text-xs text-brown/30 hover:text-brown/60 transition-colors mb-6 block"
-        >
-          ← Back
-        </button>
-        <p className="text-[10px] tracking-widest uppercase text-brown/30 mb-1">
-          Editor
-        </p>
-        <h1 className="text-[32px] font-medium tracking-tight text-brown leading-none">
-          Links
-        </h1>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="px-12 py-12 max-w-3xl"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05, duration: 0.4 }}
+        className="mb-10"
+      >
+        <h1 className="text-[32px] font-semibold tracking-tight mb-1" style={{ color: t.text }}>Links</h1>
+        <p className="text-[15px]" style={{ color: t.textSub }}>{links.length} link{links.length !== 1 ? 's' : ''}</p>
+      </motion.div>
 
-      {/* Add link form */}
-      <form onSubmit={handleAdd} className="flex flex-col gap-3 mb-8">
-        <div className="flex flex-col gap-1">
-          <label className="text-[11px] uppercase tracking-widest text-brown/40">
-            Label
-          </label>
-          <input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Spotify Playlist"
-            className="w-full px-3 py-2.5 text-sm border border-brown/20 rounded-lg focus:outline-none focus:border-brown/50 bg-transparent text-brown placeholder:text-brown/25"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-[11px] uppercase tracking-widest text-brown/40">
-            URL
-          </label>
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://..."
-            className="w-full px-3 py-2.5 text-sm border border-brown/20 rounded-lg focus:outline-none focus:border-brown/50 bg-transparent text-brown placeholder:text-brown/25"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={saving || !label || !url}
-          className="w-full py-2.5 bg-brown text-paper text-sm font-medium rounded-lg hover:bg-brown/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {saving ? "Adding..." : "Add link"}
-        </button>
-      </form>
-
-      {/* Links list */}
-      <div className="flex flex-col gap-2">
-        {links.length === 0 && (
-          <p className="text-sm text-brown/30 text-center py-10">
-            No links yet. Add your first one above.
-          </p>
-        )}
-        {links.map((link) => (
-          <div
-            key={link.id}
-            className="flex items-center justify-between border border-brown/10 rounded-xl px-4 py-3"
-          >
-            <div className="min-w-0">
-              <p className="text-[13px] font-medium text-brown truncate">{link.label}</p>
-              <p className="text-[11px] text-brown/35 truncate">{link.url}</p>
-            </div>
-            <button
-              onClick={() => handleDelete(link.id)}
-              className="shrink-0 ml-4 text-xs text-brown/25 hover:text-red-400 transition-colors"
-            >
-              Delete
-            </button>
+      <motion.form
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.4 }}
+        onSubmit={handleAdd}
+        className="flex flex-col gap-4 mb-8 p-6 rounded-2xl"
+        style={{ background: t.surface, border: `1px solid ${t.border}` }}
+      >
+        <div className="flex gap-3">
+          <div className="flex flex-col gap-1.5 flex-1">
+            <label style={lbl}>Label</label>
+            <input type="text" value={label} onChange={e => setLabel(e.target.value)}
+              placeholder="e.g. Spotify Playlist" style={inputStyle(t)} />
           </div>
-        ))}
+          <div className="flex flex-col gap-1.5 flex-1">
+            <label style={lbl}>URL</label>
+            <input type="url" value={url} onChange={e => setUrl(e.target.value)}
+              placeholder="https://..." style={inputStyle(t)} />
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <motion.button
+            type="submit" disabled={saving || !label || !url} whileTap={{ scale: 0.97 }}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-[14px] font-medium disabled:opacity-40 hover:opacity-80 transition-opacity"
+            style={{ background: t.btnBg, color: t.btnText }}
+          >
+            <Plus size={15} /> {saving ? "Adding..." : "Add link"}
+          </motion.button>
+        </div>
+      </motion.form>
+
+      <div className="flex flex-col gap-2">
+        <AnimatePresence mode="popLayout">
+          {links.length === 0 && (
+            <motion.p key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="text-[15px] text-center py-16" style={{ color: t.textFaint }}>
+              No links yet
+            </motion.p>
+          )}
+          {links.map((link, i) => (
+            <motion.div
+              key={link.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+              transition={{ delay: i * 0.04, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="flex items-center justify-between px-5 py-4 rounded-2xl gap-4"
+              style={{ border: `1px solid ${t.border}` }}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-medium" style={{ color: t.text }}>{link.label}</p>
+                <p className="text-[13px] mt-1 truncate" style={{ color: t.textFaint }}>{link.url}</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <a href={link.url} target="_blank" rel="noopener noreferrer"
+                  className="p-2 rounded-lg transition-colors" style={{ color: t.textFaint }}
+                  onMouseEnter={e => (e.currentTarget.style.color = t.text)}
+                  onMouseLeave={e => (e.currentTarget.style.color = t.textFaint)}
+                >
+                  <ExternalLink size={15} />
+                </a>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleDelete(link.id)}
+                  className="p-2 rounded-lg transition-colors" style={{ color: t.textFaint }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#ef4444")}
+                  onMouseLeave={e => (e.currentTarget.style.color = t.textFaint)}
+                >
+                  <Trash2 size={15} />
+                </motion.button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   )
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "../../lib/supabase-client";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,72 +17,104 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
+    if (error) { setError(error.message); setLoading(false); return; }
     router.push("/dashboard");
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-sm">
-        <div className="mb-8">
-          <p className="text-[10px] tracking-widest uppercase text-brown/30 mb-1">
-            Organizer Portal
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "#fafafa" }}>
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-sm"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="mb-10"
+        >
+          <p className="text-[14px] font-semibold tracking-tight mb-8" style={{ color: "#171717" }}>
+            Prelude
           </p>
-          <h1 className="text-[32px] font-medium tracking-tight text-brown leading-none">
+          <h1 className="text-[34px] font-semibold tracking-tight leading-none mb-1" style={{ color: "#171717" }}>
             Sign in
           </h1>
-        </div>
+          <p className="text-[15px]" style={{ color: "rgba(0,0,0,0.4)" }}>
+            Organizer portal
+          </p>
+        </motion.div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] uppercase tracking-widest text-brown/40">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="w-full px-3 py-2.5 text-sm border border-brown/20 rounded-lg focus:outline-none focus:border-brown/50 bg-transparent text-brown placeholder:text-brown/25"
-            />
-          </div>
+          {[
+            { label: "Email", type: "email", value: email, onChange: setEmail, placeholder: "you@example.com" },
+            { label: "Password", type: "password", value: password, onChange: setPassword, placeholder: "••••••••" },
+          ].map((field, i) => (
+            <motion.div
+              key={field.label}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 + i * 0.06, duration: 0.4 }}
+              className="flex flex-col gap-1.5"
+            >
+              <label className="text-[13px] font-medium" style={{ color: "rgba(0,0,0,0.5)" }}>
+                {field.label}
+              </label>
+              <input
+                type={field.type}
+                value={field.value}
+                onChange={e => field.onChange(e.target.value)}
+                placeholder={field.placeholder}
+                required
+                className="w-full px-3 py-3 text-[15px] rounded-xl outline-none transition-colors"
+                style={{ background: "#f2f2f0", border: "1px solid rgba(0,0,0,0.06)", color: "#171717" }}
+              />
+            </motion.div>
+          ))}
 
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] uppercase tracking-widest text-brown/40">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full px-3 py-2.5 text-sm border border-brown/20 rounded-lg focus:outline-none focus:border-brown/50 bg-transparent text-brown placeholder:text-brown/25"
-            />
-          </div>
+          <AnimatePresence>
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -4, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="text-[13px]"
+                style={{ color: "#ef4444" }}
+              >
+                {error}
+              </motion.p>
+            )}
+          </AnimatePresence>
 
-          {error && (
-            <p className="text-xs text-red-500">{error}</p>
-          )}
-
-          <button
+          <motion.button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-brown text-paper text-sm font-medium rounded-lg hover:bg-brown/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full py-3 text-[15px] font-medium rounded-xl transition-opacity disabled:opacity-50 mt-1"
+            style={{ background: "#171717", color: "#ffffff" }}
           >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
+            {loading ? "Signing in..." : "Continue"}
+          </motion.button>
         </form>
-      </div>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+          className="text-center text-[13px] mt-2"
+          style={{ color: "rgba(0,0,0,0.4)" }}
+        >
+          Don't have an account?{" "}
+          <a href="/dashboard/signup" className="underline" style={{ color: "#171717" }}>
+            Sign up
+          </a>
+        </motion.p>
+      </motion.div>
     </div>
   );
 }

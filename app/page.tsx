@@ -1,545 +1,511 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import Image from "next/image";
-import BottomNav from "./components/BottomNav";
-import HomeTab from "./components/tabs/HomeTab";
-import ScheduleTab from "./components/tabs/ScheduleTab";
-import RulesTab from "./components/tabs/RulesTab";
-import GroupsTab from "./components/tabs/GroupsTab";
-import InfoTab from "./components/tabs/InfoTab";
-import RoomsTab from "./components/tabs/RoomTab";
-import { Check, Circle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion, useInView } from "framer-motion";
+import {
+  Calendar, Users, Megaphone, Link,
+  Palette, ArrowRight, Check, Zap
+} from "lucide-react";
 
-type Tab = "home" | "schedule" | "rules" | "groups" | "info" | "rooms";
+// ── Scroll-triggered fade-up ─────────────────────────────────────────────────
+function FadeUp({ children, delay = 0, className = "" }: {
+  children: React.ReactNode; delay?: number; className?: string;
+}) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 24 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.55, delay, ease: [0.16, 1, 0.3, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
-const UNLOCK_DATE = new Date("2026-03-13T19:00:00");
-const PASSWORD_HASH = btoa("PMTisKindaChinese");
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
+// ── Nav ───────────────────────────────────────────────────────────────────────
+function Nav() {
+  const [scrolled, setScrolled] = useState(false);
+  const router = useRouter();
 
-// Storage keys
-const STORAGE_KEYS = {
-  AUTHENTICATED: 'retreat_auth',
-  ATTEMPTS: 'retreat_attempts',
-  LOCKOUT_UNTIL: 'retreat_lockout',
-  PACKING_LIST: 'retreat_packing_list',
-};
-
-// Packing list items
-const PACKING_ITEMS = [
-  { id: "bible", label: "Bible (physical ones are preferred)" },
-  { id: "journal", label: "Journal" },
-  { id: "pen", label: "Pen/pencil" },
-  { id: "water", label: "Reusable water bottle (limited plastic bottles available)" },
-  { id: "toiletries", label: "Toiletries/medications" },
-  { id: "sleeping", label: "Sleeping bag/pillow", optional: true },
-  { id: "towel", label: "Towel" },
-  { id: "slippers", label: "Slippers and/or shower slippers" },
-  { id: "sneakers", label: "Sneakers and activewear (for games)" },
-  { id: "money", label: "Spending money (for meals on the way there/back with your car)" },
-  { id: "snacks", label: "OPTIONAL: snacks for your car rides & your lovely drivers", optional: true },
-];
-
-export default function Page() {
-  const [tab, setTab] = useState<Tab>("home");
-  const [now, setNow] = useState<Date>(() => new Date());
-  const [mounted, setMounted] = useState(false);
-  const [password, setPassword] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showPasswordInput, setShowPasswordInput] = useState(false);
-  const [error, setError] = useState("");
-  const [attempts, setAttempts] = useState(0);
-  const [isLockedOut, setIsLockedOut] = useState(false);
-  const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
-  
-  // Packing list state
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
-  const [showPackingList, setShowPackingList] = useState(false);
-
-  // Refs to prevent multiple submissions
-  const isSubmitting = useRef(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Load persisted state on mount
   useEffect(() => {
-    setMounted(true);
-    setNow(new Date());
-
-    // Load authentication state
-    const savedAuth = localStorage.getItem(STORAGE_KEYS.AUTHENTICATED);
-    if (savedAuth === 'true') {
-      setIsAuthenticated(true);
-    }
-
-    // Load attempts
-    const savedAttempts = localStorage.getItem(STORAGE_KEYS.ATTEMPTS);
-    if (savedAttempts) {
-      setAttempts(parseInt(savedAttempts, 10));
-    }
-
-    // Load lockout
-    const savedLockout = localStorage.getItem(STORAGE_KEYS.LOCKOUT_UNTIL);
-    if (savedLockout) {
-      const lockoutDate = new Date(savedLockout);
-      if (lockoutDate > new Date()) {
-        setLockoutUntil(lockoutDate);
-        setIsLockedOut(true);
-      } else {
-        // Clear expired lockout
-        localStorage.removeItem(STORAGE_KEYS.LOCKOUT_UNTIL);
-        localStorage.removeItem(STORAGE_KEYS.ATTEMPTS);
-      }
-    }
-
-    // Load packing list state
-    const savedPacking = localStorage.getItem(STORAGE_KEYS.PACKING_LIST);
-    if (savedPacking) {
-      try {
-        const parsed = JSON.parse(savedPacking);
-        setCheckedItems(new Set(parsed));
-      } catch (e) {
-        console.error('Failed to parse saved packing list:', e);
-      }
-    }
-
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
+    const fn = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  // Persist authentication state
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem(STORAGE_KEYS.AUTHENTICATED, isAuthenticated.toString());
-    }
-  }, [isAuthenticated, mounted]);
+  return (
+    <motion.nav
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 transition-all duration-300"
+      style={{
+        background: scrolled ? "rgba(250,250,250,0.85)" : "transparent",
+        backdropFilter: scrolled ? "blur(12px)" : "none",
+        borderBottom: scrolled ? "1px solid rgba(0,0,0,0.06)" : "none",
+      }}
+    >
+      <span className="text-[17px] font-semibold tracking-tight" style={{ color: "#171717" }}>
+        Prelude
+      </span>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push("/dashboard/login")}
+          className="px-4 py-2 text-[14px] rounded-xl transition-opacity hover:opacity-60"
+          style={{ color: "rgba(0,0,0,0.5)" }}
+        >
+          Sign in
+        </button>
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => router.push("/dashboard/signup")}
+          className="px-4 py-2 text-[14px] font-medium rounded-xl transition-opacity hover:opacity-80"
+          style={{ background: "#171717", color: "#fff" }}
+        >
+          Get started
+        </motion.button>
+      </div>
+    </motion.nav>
+  );
+}
 
-  // Persist attempts
-  useEffect(() => {
-    if (mounted && attempts > 0) {
-      localStorage.setItem(STORAGE_KEYS.ATTEMPTS, attempts.toString());
-    } else if (mounted && attempts === 0) {
-      localStorage.removeItem(STORAGE_KEYS.ATTEMPTS);
-    }
-  }, [attempts, mounted]);
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function LandingPage() {
+  const router = useRouter();
 
-  // Persist lockout
-  useEffect(() => {
-    if (mounted && lockoutUntil) {
-      localStorage.setItem(STORAGE_KEYS.LOCKOUT_UNTIL, lockoutUntil.toISOString());
-    } else if (mounted && !lockoutUntil) {
-      localStorage.removeItem(STORAGE_KEYS.LOCKOUT_UNTIL);
-    }
-  }, [lockoutUntil, mounted]);
+  const features = [
+    { icon: Calendar, label: "Schedule", desc: "Build day-by-day timelines with live countdowns so attendees always know what's next." },
+    { icon: Users, label: "Groups", desc: "Assign people to teams, cabins, or small groups. Searchable by name in seconds." },
+    { icon: Megaphone, label: "Announcements", desc: "Push real-time updates to all attendees without group chats or email blasts." },
+    { icon: Link, label: "Links", desc: "One place for Spotify playlists, forms, maps, and anything else your event needs." },
+    { icon: Palette, label: "Design", desc: "Brand each event with your own colors, fonts, and tab names. No code required." },
+    { icon: Zap, label: "Instant access", desc: "Attendees join with a simple access code — no downloads, no accounts, no friction." },
+  ]
 
-  // Persist packing list
-  useEffect(() => {
-    if (mounted) {
-      const array = Array.from(checkedItems);
-      localStorage.setItem(STORAGE_KEYS.PACKING_LIST, JSON.stringify(array));
-    }
-  }, [checkedItems, mounted]);
+  const useCases = [
+    { label: "Campus retreats", desc: "Spiritual retreats, mission trips, and overnight programs." },
+    { label: "Hackathons", desc: "Multi-day builds with team assignments and tight schedules." },
+    { label: "Pop-up markets", desc: "Vendor lineups, set times, and links all in one place." },
+    { label: "Conferences", desc: "Multi-track sessions, speaker bios, and live updates." },
+    { label: "Youth camps", desc: "Cabin groups, daily schedules, and parent-friendly links." },
+    { label: "Club events", desc: "Any campus org event that needs more than a Google Doc." },
+  ]
 
-  // Check lockout status
-  useEffect(() => {
-    if (lockoutUntil && new Date() > lockoutUntil) {
-      setIsLockedOut(false);
-      setLockoutUntil(null);
-      setAttempts(0);
-      // Clear storage
-      localStorage.removeItem(STORAGE_KEYS.LOCKOUT_UNTIL);
-      localStorage.removeItem(STORAGE_KEYS.ATTEMPTS);
-    }
-  }, [now, lockoutUntil]);
+  const steps = [
+    { n: "01", label: "Create your event", desc: "Name it, set an access code, and pick your colors. Takes under two minutes." },
+    { n: "02", label: "Build your content", desc: "Add your schedule, assign groups, drop in links. Everything in one dashboard." },
+    { n: "03", label: "Share the link", desc: "Attendees open it on their phone and enter the code. That's it — they're in." },
+  ]
 
-  function handleNav(t: string) {
-    // Validate tab parameter
-    const validTabs: Tab[] = ["home", "schedule", "rules", "groups", "info", "rooms"];
-    if (validTabs.includes(t as Tab)) {
-      setTab(t as Tab);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }
+  const pricing = [
+    {
+      label: "Free",
+      price: "$0",
+      sub: "forever",
+      features: ["Unlimited events", "Schedule builder", "Group assignments", "Announcements", "Links", "Custom colors"],
+      cta: "Get started free",
+      primary: false,
+    },
+    {
+      label: "Pro",
+      price: "$12",
+      sub: "per month",
+      features: ["Everything in Free", "CSV group import", "Custom domain", "Priority support", "Analytics", "Remove Prelude branding"],
+      cta: "Coming soon",
+      primary: true,
+    },
+  ]
 
-  // Sanitize input to prevent injection
-  const sanitizeInput = (input: string): string => {
-    return input.replace(/[<>{}()\[\]\\]/g, '').trim();
-  };
+  return (
+    <div style={{ background: "#fafafa", color: "#171717", fontFamily: "'Neue Haas Grotesk Display Pro', sans-serif" }}>
+      <Nav />
 
-  const handlePasswordSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
+      {/* ── Hero ── */}
+      <section className="min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-32 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-8 text-[12px] font-medium"
+          style={{ background: "rgba(0,0,0,0.05)", color: "rgba(0,0,0,0.5)" }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+          Now in beta — free for all organizers
+        </motion.div>
 
-    // Prevent double submission
-    if (isSubmitting.current) return;
+        <motion.h1
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="text-[clamp(42px,7vw,84px)] font-semibold tracking-tight leading-[1.05] mb-6 max-w-4xl"
+          style={{ color: "#171717", letterSpacing: "-0.03em" }}
+        >
+          The event app your
+          <br />
+          <span style={{ color: "rgba(0,0,0,0.3)" }}>attendees will actually use.</span>
+        </motion.h1>
 
-    // Check lockout
-    if (isLockedOut) {
-      const minutesLeft = lockoutUntil ?
-        Math.ceil((lockoutUntil.getTime() - Date.now()) / 60000) : 15;
-      setError(`Too many attempts. Try again in ${minutesLeft} minutes.`);
-      return;
-    }
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22, duration: 0.5 }}
+          className="text-[18px] max-w-xl mx-auto mb-10 leading-relaxed"
+          style={{ color: "rgba(0,0,0,0.45)" }}
+        >
+          Build a shareable event companion in minutes — schedules, groups, announcements, and links, all in one place.
+        </motion.p>
 
-    // Sanitize input
-    const sanitizedPassword = sanitizeInput(password);
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28, duration: 0.5 }}
+          className="flex items-center gap-3 flex-wrap justify-center"
+        >
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => router.push("/dashboard/signup")}
+            className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-medium transition-opacity hover:opacity-80"
+            style={{ background: "#171717", color: "#fff" }}
+          >
+            Create your first event
+            <ArrowRight size={15} />
+          </motion.button>
+          <button
+            onClick={() => router.push("/dashboard/login")}
+            className="px-6 py-3.5 rounded-xl text-[15px] transition-opacity hover:opacity-60"
+            style={{ color: "rgba(0,0,0,0.45)", border: "1px solid rgba(0,0,0,0.1)" }}
+          >
+            Sign in
+          </button>
+        </motion.div>
 
-    // Check if password is empty after sanitization
-    if (!sanitizedPassword) {
-      setError("Password cannot be empty");
-      return;
-    }
-
-    isSubmitting.current = true;
-
-    // Simulate async password check to prevent timing attacks
-    setTimeout(() => {
-      // Compare hash instead of plaintext
-      const isCorrect = btoa(sanitizedPassword) === PASSWORD_HASH;
-
-      if (isCorrect) {
-        // Success - reset all security states
-        setIsAuthenticated(true);
-        setShowPasswordInput(false);
-        setPassword("");
-        setError("");
-        setAttempts(0);
-        setIsLockedOut(false);
-        setLockoutUntil(null);
-      } else {
-        // Failed attempt
-        const newAttempts = attempts + 1;
-        setAttempts(newAttempts);
-
-        if (newAttempts >= MAX_ATTEMPTS) {
-          // Lock out
-          const lockoutTime = new Date(Date.now() + LOCKOUT_TIME);
-          setIsLockedOut(true);
-          setLockoutUntil(lockoutTime);
-          setError(`Too many failed attempts. Locked out for 15 minutes.`);
-        } else {
-          setError(`Invalid password. ${MAX_ATTEMPTS - newAttempts} attempts remaining.`);
-        }
-
-        // Clear password field
-        setPassword("");
-
-        // Focus input for retry
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }
-
-      isSubmitting.current = false;
-    }, Math.random() * 200 + 100); // Random delay to prevent timing attacks
-  }, [password, attempts, isLockedOut, lockoutUntil]);
-
-  // Add logout function (optional - for testing)
-  const handleLogout = useCallback(() => {
-    setIsAuthenticated(false);
-    setAttempts(0);
-    setIsLockedOut(false);
-    setLockoutUntil(null);
-    localStorage.removeItem(STORAGE_KEYS.AUTHENTICATED);
-    localStorage.removeItem(STORAGE_KEYS.ATTEMPTS);
-    localStorage.removeItem(STORAGE_KEYS.LOCKOUT_UNTIL);
-  }, []);
-
-  // Packing list functions
-  const toggleItem = (id: string) => {
-    setCheckedItems(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
-  if (!mounted) return null;
-
-  const isLocked = now < UNLOCK_DATE && !isAuthenticated;
-
-  // ── Pre-retreat lock screen — with packing list ──
-  if (isLocked) {
-    const diffMs = UNLOCK_DATE.getTime() - now.getTime();
-
-    // Calculate time units
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-
-    // Format countdown with leading zeros
-    const formatWithLeadingZeros = (num: number): string => {
-      return num.toString().padStart(2, '0');
-    };
-
-    // Different countdown formats based on remaining time
-    const getCountdownDisplay = () => {
-      if (days > 0) {
-        return (
-          <div className="flex items-center gap-1">
-            <span className="text-sm text-brown tabular-nums font-medium">
-              {days}d {formatWithLeadingZeros(hours)}:{formatWithLeadingZeros(minutes)}:{formatWithLeadingZeros(seconds)}
-            </span>
+        {/* Mock UI preview */}
+        <motion.div
+          initial={{ opacity: 0, y: 32 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-20 w-full max-w-2xl mx-auto rounded-2xl overflow-hidden"
+          style={{ border: "1px solid rgba(0,0,0,0.08)", background: "#fff", boxShadow: "0 24px 80px rgba(0,0,0,0.08)" }}
+        >
+          {/* Browser chrome */}
+          <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#f7f7f5" }}>
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(0,0,0,0.12)" }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(0,0,0,0.12)" }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(0,0,0,0.12)" }} />
+            <div className="flex-1 mx-4 px-3 py-1 rounded-md text-[11px] text-center" style={{ background: "rgba(0,0,0,0.05)", color: "rgba(0,0,0,0.3)" }}>
+              prelude.app/e/summit-2026
+            </div>
           </div>
-        );
-      } else if (hours > 0) {
-        return (
-          <div className="flex items-center gap-1">
-            <span className="text-sm text-brown tabular-nums font-medium">
-              {formatWithLeadingZeros(hours)}:{formatWithLeadingZeros(minutes)}:{formatWithLeadingZeros(seconds)}
-            </span>
-            <span className="text-xs text-brown/40">hours</span>
-          </div>
-        );
-      } else {
-        return (
-          <div className="flex items-center gap-1">
-            <span className="text-sm text-brown tabular-nums font-medium">
-              {formatWithLeadingZeros(minutes)}:{formatWithLeadingZeros(seconds)}
-            </span>
-            <span className="text-xs text-brown/40">minutes</span>
-          </div>
-        );
-      }
-    };
 
-    const totalItems = PACKING_ITEMS.length;
-    const completedCount = checkedItems.size;
-    const progress = (completedCount / totalItems) * 100;
+          {/* Event UI — black and white */}
+          <div className="p-6" style={{ background: "#fafafa" }}>
 
-    return (
-      <div className="max-w-lg mx-auto flex flex-col min-h-dvh px-7 pt-16 pb-10">
-        {/* Top section */}
-        <div className="fade-up delay-1">
-          <p className="text-[10px] tracking-widest2 uppercase text-brown/35 mb-8">
-            KCF · Mar 13-15, 2026
-          </p>
+            {/* Header */}
+            <div className="mb-5">
+              <p className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: "rgba(0,0,0,0.3)" }}>
+                Summit 2026 · Day 2
+              </p>
+              <h3 className="text-[20px] font-semibold tracking-tight" style={{ color: "#171717" }}>
+                Schedule
+              </h3>
+            </div>
 
-          <h1 className="text-[clamp(58px,16vw,80px)] font-medium leading-[0.90] tracking-tight text-brown">
-            Seek<br />First
-            The Kingdom
-          </h1>
-
-          <div className="my-3 w-full flex justify-center items-center">
-            <Image
-              src="/running.png"
-              alt="The Kingdom"
-              width={0}
-              height={0}
-              sizes="100vw"
-              className="w-full h-auto max-w-[350px]"
-              priority
-            />
-          </div>
-        </div>
-
-        {/* Toggle between countdown and packing list */}
-        <div className="fade-up delay-2 mt-4">
-          <div className="flex gap-2 mb-4 ">
-            <button
-              onClick={() => setShowPackingList(false)}
-              className={`flex-1 py-2 text-xs uppercase tracking-widest rounded-lg transition-all ${
-                !showPackingList 
-                  ? 'bg-brown text-paper font-medium' 
-                  : 'text-brown/30 hover:text-brown/50'
-              }`}
+            {/* Countdown banner */}
+            <div
+              className="flex items-center justify-between px-4 py-3 rounded-xl mb-4"
+              style={{ background: "#171717" }}
             >
-              Countdown
-            </button>
-            <button
-              onClick={() => setShowPackingList(true)}
-              className={`flex-1 py-2 text-xs uppercase tracking-widest rounded-lg transition-all ${
-                showPackingList 
-                  ? 'bg-brown text-paper font-medium' 
-                  : 'text-brown/30 hover:text-brown/50'
-              }`}
-            >
-              Packing List
-            </button>
-          </div>
-
-          {!showPackingList ? (
-            /* Countdown View */
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between py-[14px] border-t border-brown/10">
-                <span className="text-sm text-brown/80">
-                  Available in
-                </span>
-                {getCountdownDisplay()}
+              <div>
+                <p className="text-[9px] uppercase tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  Happening now
+                </p>
+                <p className="text-[13px] font-medium" style={{ color: "#fff" }}>
+                  Workshop: Product Design
+                </p>
               </div>
+              <div className="text-right">
+                <p className="text-[16px] font-semibold tabular-nums" style={{ color: "#fff" }}>42m</p>
+                <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.4)" }}>remaining</p>
+              </div>
+            </div>
 
-              {/* Password protection section */}
-              {!showPasswordInput ? (
-                <button
-                  onClick={() => {
-                    setShowPasswordInput(true);
-                    setTimeout(() => inputRef.current?.focus(), 100);
-                  }}
-                  className="flex items-center justify-between py-[14px] border-t border-brown/10 w-full hover:bg-brown/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isLockedOut}
+            {/* Schedule blocks */}
+            {[
+              { time: "9:00-10:00am", title: "Opening Keynote", now: false, past: true },
+              { time: "10:00-11:30am", title: "Workshop: Product Design", now: true, past: false },
+              { time: "12:00-1:00pm", title: "Lunch Break", now: false, past: false },
+              { time: "1:00-2:30pm", title: "Panel: Future of Work", now: false, past: false },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl mb-2"
+                style={{
+                  background: item.now ? "#171717" : item.past ? "transparent" : "#fff",
+                  border: item.now ? "none" : `1px solid rgba(0,0,0,${item.past ? "0.04" : "0.08"})`,
+                  opacity: item.past ? 0.4 : 1,
+                }}
+              >
+                <span
+                  className="text-[10px] font-mono w-24 shrink-0"
+                  style={{ color: item.now ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.35)" }}
                 >
-                  <span className="text-sm text-brown/80">
-                    {isLockedOut ? 'Locked out' : 'Already have access?'}
+                  {item.time}
+                </span>
+                <span
+                  className="text-[13px] font-medium flex-1"
+                  style={{ color: item.now ? "#fff" : "#171717" }}
+                >
+                  {item.title}
+                </span>
+                {item.now && (
+                  <span
+                    className="text-[9px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+                  >
+                    NOW
                   </span>
-                  <span className="text-sm text-brown font-medium">
-                    {isLockedOut ? 'Nice try...' : 'Enter password →'}
+                )}
+              </div>
+            ))}
+
+            {/* Bottom nav with lucide icons */}
+            <div
+              className="flex justify-around mt-5 pt-4"
+              style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
+            >
+              {[
+                { icon: Calendar, label: "Schedule", active: true },
+                { icon: Users, label: "Groups", active: false },
+                { icon: Megaphone, label: "Updates", active: false },
+                { icon: Link, label: "Links", active: false },
+              ].map(({ icon: Icon, label, active }) => (
+                <div key={label} className="flex flex-col items-center gap-1">
+                  <Icon
+                    size={16}
+                    style={{ color: active ? "#171717" : "rgba(0,0,0,0.25)" }}
+                  />
+                  <span
+                    className="text-[9px] uppercase tracking-widest"
+                    style={{ color: active ? "#171717" : "rgba(0,0,0,0.25)", fontWeight: active ? 600 : 400 }}
+                  >
+                    {label}
                   </span>
-                </button>
-              ) : (
-                <form onSubmit={handlePasswordSubmit} className="py-[14px] border-t border-brown/10">
-                  <div className="flex flex-col gap-2">
-                    <input
-                      ref={inputRef}
-                      type="password"
-                      value={password}
-                      onChange={(e) => {
-                        const sanitized = sanitizeInput(e.target.value).slice(0, 50);
-                        setPassword(sanitized);
-                        setError("");
-                      }}
-                      onPaste={(e) => {}}
-                      onKeyDown={(e) => {
-                        if (e.key === '<' || e.key === '>' || e.key === '{' || e.key === '}') {
-                          e.preventDefault();
-                        }
-                      }}
-                      placeholder="Enter password"
-                      className="w-full px-3 py-2 text-sm border border-brown/20 rounded-md focus:outline-none focus:border-brown/40 disabled:opacity-50"
-                      disabled={isLockedOut || isSubmitting.current}
-                      maxLength={50}
-                      autoComplete="off"
-                    />
-                    {error && <p className="text-xs text-red-500">{error}</p>}
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        className="flex-1 px-3 py-2 text-sm bg-brown text-white rounded-md hover:bg-brown/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={isLockedOut || isSubmitting.current || !password}
-                      >
-                        {isSubmitting.current ? 'Checking...' : 'Unlock'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPasswordInput(false);
-                          setPassword("");
-                          setError("");
-                          isSubmitting.current = false;
-                        }}
-                        className="px-3 py-2 text-sm border border-brown/20 rounded-md hover:bg-brown/5 transition-colors disabled:opacity-50"
-                        disabled={isSubmitting.current}
-                      >
-                        Cancel
-                      </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section className="px-6 py-28 max-w-5xl mx-auto">
+        <FadeUp className="mb-16 text-center">
+          <p className="text-[12px] uppercase tracking-widest mb-3" style={{ color: "rgba(0,0,0,0.3)" }}>How it works</p>
+          <h2 className="text-[clamp(28px,4vw,42px)] font-semibold tracking-tight" style={{ letterSpacing: "-0.02em" }}>
+            Up and running in minutes
+          </h2>
+        </FadeUp>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {steps.map((step, i) => (
+            <FadeUp key={step.n} delay={i * 0.08}>
+              <div className="flex flex-col gap-4">
+                <span className="text-[13px] font-mono" style={{ color: "rgba(0,0,0,0.2)" }}>{step.n}</span>
+                <div className="h-px w-12" style={{ background: "rgba(0,0,0,0.12)" }} />
+                <h3 className="text-[18px] font-semibold tracking-tight">{step.label}</h3>
+                <p className="text-[15px] leading-relaxed" style={{ color: "rgba(0,0,0,0.45)" }}>{step.desc}</p>
+              </div>
+            </FadeUp>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Features ── */}
+      <section className="px-6 py-28" style={{ background: "#fff" }}>
+        <div className="max-w-5xl mx-auto">
+          <FadeUp className="mb-16 text-center">
+            <p className="text-[12px] uppercase tracking-widest mb-3" style={{ color: "rgba(0,0,0,0.3)" }}>Features</p>
+            <h2 className="text-[clamp(28px,4vw,42px)] font-semibold tracking-tight" style={{ letterSpacing: "-0.02em" }}>
+              Everything your event needs
+            </h2>
+          </FadeUp>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {features.map((f, i) => {
+              const Icon = f.icon;
+              return (
+                <FadeUp key={f.label} delay={i * 0.06}>
+                  <div
+                    className="p-6 rounded-2xl flex flex-col gap-4 h-full"
+                    style={{ border: "1px solid rgba(0,0,0,0.06)", background: "#fafafa" }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ background: "rgba(0,0,0,0.05)" }}
+                    >
+                      <Icon size={18} style={{ color: "rgba(0,0,0,0.4)" }} />
+                    </div>
+                    <div>
+                      <p className="text-[15px] font-semibold mb-1">{f.label}</p>
+                      <p className="text-[14px] leading-relaxed" style={{ color: "rgba(0,0,0,0.45)" }}>{f.desc}</p>
                     </div>
                   </div>
-                </form>
-              )}
-
-              <div className="flex items-center justify-between py-[14px] border-t border-b border-brown/10">
-                <span className="text-sm text-brown/45 font-light">
-                  Unlocks Mar 13 at 7:00 PM
-                </span>
-              </div>
-            </div>
-          ) : (
-            /* Packing List View */
-            <div className="flex flex-col py-4">
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-brown mb-2">What to Pack</h3>
-                
-                {/* Progress bar */}
-                <div className="mt-3 mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-brown/40">
-                      {completedCount} of {totalItems} items packed
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-brown/10 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gold rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Packing list items */}
-                <div className="space-y-2 pr-2">
-                  {PACKING_ITEMS.map((item) => {
-                    const isChecked = checkedItems.has(item.id);
-                    
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => toggleItem(item.id)}
-                        className="w-full flex items-start gap-3 p-2 rounded-lg transition-all duration-200 hover:bg-brown/5"
-                      >
-                        <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${
-                          isChecked 
-                            ? 'bg-gold border-gold' 
-                            : 'border-brown/30'
-                        }`}>
-                          {isChecked && <Check size={12} className="text-paper" />}
-                        </div>
-                        <div className="flex-1 text-left">
-                          <p className={`text-xs transition-all duration-200 ${
-                            isChecked 
-                              ? 'text-brown/40 line-through' 
-                              : 'text-brown'
-                          }`}>
-                            {item.label}
-                          </p>
-                          {item.optional && (
-                            <span className="text-[8px] text-brown/30 uppercase tracking-wider mt-1 inline-block">
-                              Optional
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Footer note */}
-                <div className="mt-6 p-3 bg-brown/5 rounded-lg">
-                  <p className="text-[10px] text-brown/40 leading-relaxed text-center">
-                    ✓ Your checklist is saved automatically
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+                </FadeUp>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    );
-  }
+      </section>
 
-  // ── Main app ──
-  return (
-    <div className="max-w-lg mx-auto min-h-screen relative">
-      <main key={tab}>
-        {tab === "home" && <HomeTab onNavigate={handleNav} />}
-        {tab === "schedule" && <ScheduleTab />}
-        {tab === "rules" && <RulesTab />}
-        {tab === "groups" && <GroupsTab />}
-        {tab === "info" && <InfoTab now={now} />}
-        {tab === "rooms" && <RoomsTab />}
-      </main>
-      <BottomNav active={tab} onChange={(t) => handleNav(t)} />
+      {/* ── Who it's for ── */}
+      <section className="px-6 py-28 max-w-5xl mx-auto">
+        <FadeUp className="mb-16 text-center">
+          <p className="text-[12px] uppercase tracking-widest mb-3" style={{ color: "rgba(0,0,0,0.3)" }}>Who it's for</p>
+          <h2 className="text-[clamp(28px,4vw,42px)] font-semibold tracking-tight" style={{ letterSpacing: "-0.02em" }}>
+            Built for community events
+          </h2>
+          <p className="text-[16px] mt-4 max-w-xl mx-auto" style={{ color: "rgba(0,0,0,0.45)" }}>
+            Any event where people need to know where to be, who they're with, and what's happening next.
+          </p>
+        </FadeUp>
 
-      {/* Optional: Add logout button for testing (remove in production) */}
-      {process.env.NODE_ENV === 'development' && isAuthenticated && (
-        <button
-          onClick={handleLogout}
-          className="fixed top-12 right-4 text-xs text-brown/30 hover:text-brown/60"
-        >
-          Logout (dev)
-        </button>
-      )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {useCases.map((uc, i) => (
+            <FadeUp key={uc.label} delay={i * 0.05}>
+              <div
+                className="px-5 py-4 rounded-2xl flex flex-col gap-1"
+                style={{ border: "1px solid rgba(0,0,0,0.06)" }}
+              >
+                <p className="text-[15px] font-semibold">{uc.label}</p>
+                <p className="text-[13px]" style={{ color: "rgba(0,0,0,0.4)" }}>{uc.desc}</p>
+              </div>
+            </FadeUp>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Pricing ── */}
+      <section className="px-6 py-28" style={{ background: "#fff" }}>
+        <div className="max-w-3xl mx-auto">
+          <FadeUp className="mb-16 text-center">
+            <p className="text-[12px] uppercase tracking-widest mb-3" style={{ color: "rgba(0,0,0,0.3)" }}>Pricing</p>
+            <h2 className="text-[clamp(28px,4vw,42px)] font-semibold tracking-tight" style={{ letterSpacing: "-0.02em" }}>
+              Simple, honest pricing
+            </h2>
+            <p className="text-[16px] mt-4" style={{ color: "rgba(0,0,0,0.45)" }}>
+              Free while we're in beta. Pro features coming soon.
+            </p>
+          </FadeUp>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pricing.map((plan, i) => (
+              <FadeUp key={plan.label} delay={i * 0.08}>
+                <div
+                  className="p-8 rounded-2xl flex flex-col gap-6 h-full"
+                  style={{
+                    border: plan.primary ? "1.5px solid #171717" : "1px solid rgba(0,0,0,0.08)",
+                    background: plan.primary ? "#171717" : "#fafafa",
+                  }}
+                >
+                  <div>
+                    <p
+                      className="text-[13px] font-medium uppercase tracking-widest mb-4"
+                      style={{ color: plan.primary ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)" }}
+                    >
+                      {plan.label}
+                    </p>
+                    <div className="flex items-baseline gap-1">
+                      <span
+                        className="text-[42px] font-semibold tracking-tight"
+                        style={{ color: plan.primary ? "#fff" : "#171717", letterSpacing: "-0.03em" }}
+                      >
+                        {plan.price}
+                      </span>
+                      <span className="text-[14px]" style={{ color: plan.primary ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.35)" }}>
+                        /{plan.sub}
+                      </span>
+                    </div>
+                  </div>
+
+                  <ul className="flex flex-col gap-2.5 flex-1">
+                    {plan.features.map(f => (
+                      <li key={f} className="flex items-center gap-2.5 text-[14px]"
+                        style={{ color: plan.primary ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)" }}
+                      >
+                        <Check size={14} style={{ color: plan.primary ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.3)", flexShrink: 0 }} />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => !plan.primary && router.push("/dashboard/signup")}
+                    disabled={plan.primary}
+                    className="w-full py-3 rounded-xl text-[14px] font-medium transition-opacity hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: plan.primary ? "rgba(255,255,255,0.1)" : "#171717",
+                      color: plan.primary ? "rgba(255,255,255,0.5)" : "#fff",
+                    }}
+                  >
+                    {plan.cta}
+                  </motion.button>
+                </div>
+              </FadeUp>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Final CTA ── */}
+      <section className="px-6 py-32 text-center max-w-3xl mx-auto">
+        <FadeUp>
+          <h2
+            className="text-[clamp(32px,5vw,56px)] font-semibold tracking-tight mb-6"
+            style={{ letterSpacing: "-0.03em" }}
+          >
+            Your next event deserves
+            <br />
+            better than a Google Doc.
+          </h2>
+          <p className="text-[17px] mb-10" style={{ color: "rgba(0,0,0,0.45)" }}>
+            Build your event companion in minutes. Free, forever.
+          </p>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => router.push("/dashboard/signup")}
+            className="inline-flex items-center gap-2 px-7 py-4 rounded-xl text-[16px] font-medium transition-opacity hover:opacity-80"
+            style={{ background: "#171717", color: "#fff" }}
+          >
+            Get started free
+            <ArrowRight size={16} />
+          </motion.button>
+        </FadeUp>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer
+        className="px-8 py-8 flex items-center justify-between"
+        style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
+      >
+        <span className="text-[14px] font-semibold" style={{ color: "#171717" }}>Prelude</span>
+        <div className="flex items-center gap-6">
+          <a href="/dashboard/login" className="text-[13px] transition-opacity hover:opacity-60" style={{ color: "rgba(0,0,0,0.4)" }}>
+            Sign in
+          </a>
+          <a href="/dashboard/signup" className="text-[13px] transition-opacity hover:opacity-60" style={{ color: "rgba(0,0,0,0.4)" }}>
+            Sign up
+          </a>
+        </div>
+        <p className="text-[13px]" style={{ color: "rgba(0,0,0,0.3)" }}>
+          © {new Date().getFullYear()} Prelude
+        </p>
+      </footer>
     </div>
   );
 }

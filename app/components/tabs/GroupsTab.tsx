@@ -9,12 +9,22 @@ type SmallGroup = {
   members: string[];
 }
 
-export default function GroupsTab({ eventId }: { eventId: string }) {
-  const [groups, setGroups] = useState<SmallGroup[]>([]);
+export default function GroupsTab({ eventId, primaryColor, theme }: {
+  eventId: string
+  primaryColor: string
+  theme: string
+}) {
+  const [groups, setGroups]   = useState<SmallGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [open, setOpen] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch]   = useState("");
+  const [open, setOpen]       = useState<string | null>(null);
+  const inputRef              = useRef<HTMLInputElement>(null);
+
+  const isDark       = theme === 'dark';
+  const textColor    = isDark ? '#f5f0eb' : '#2c1a0e';
+  const subTextColor = isDark ? 'rgba(245,240,235,0.3)' : 'rgba(44,26,14,0.3)';
+  const dividerColor = isDark ? 'rgba(245,240,235,0.07)' : 'rgba(44,26,14,0.07)';
+  const memberColor  = isDark ? 'rgba(245,240,235,0.55)' : 'rgba(44,26,14,0.55)';
 
   useEffect(() => {
     async function fetchGroups() {
@@ -36,10 +46,8 @@ export default function GroupsTab({ eventId }: { eventId: string }) {
         const groupMembers = memberRows
           .filter((m) => m.group_id === g.id)
           .map((m) => m.name)
-
-        const leader = groupMembers[0]?.replace(' (Leader)', '') ?? ''
+        const leader  = groupMembers[0]?.replace(' (Leader)', '') ?? ''
         const members = groupMembers.slice(1)
-
         return { name: g.name, leader, members }
       })
 
@@ -47,7 +55,7 @@ export default function GroupsTab({ eventId }: { eventId: string }) {
       setLoading(false)
     }
     fetchGroups()
-  }, [])
+  }, [eventId])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -68,7 +76,7 @@ export default function GroupsTab({ eventId }: { eventId: string }) {
     return (
       <>
         {text.slice(0, idx)}
-        <mark className="bg-gold/20 text-brown rounded-[2px] px-[1px]">
+        <mark style={{ background: primaryColor + '33', color: textColor }} className="rounded-[2px] px-[1px]">
           {text.slice(idx, idx + q.length)}
         </mark>
         {text.slice(idx + q.length)}
@@ -77,7 +85,7 @@ export default function GroupsTab({ eventId }: { eventId: string }) {
   }
 
   if (loading) return (
-    <div className="flex h-dvh items-center justify-center text-sm" style={{ color: 'rgba(44,26,14,0.4)' }}>
+    <div className="flex h-dvh items-center justify-center text-sm" style={{ color: subTextColor }}>
       Loading...
     </div>
   )
@@ -86,40 +94,43 @@ export default function GroupsTab({ eventId }: { eventId: string }) {
     <div className="px-7 pt-12 pb-28">
       {/* Header */}
       <div className="fade-up delay-1 mb-8">
-        <p className="text-[10px] tracking-widest2 uppercase text-brown/30 mb-1">
+        <p className="text-[10px] tracking-widest uppercase mb-1" style={{ color: subTextColor }}>
           Find your people
         </p>
-        <h2 className="text-[32px] font-medium tracking-tight text-brown leading-none">
-          Small Groups
+        <h2 className="text-[32px] font-medium tracking-tight leading-none" style={{ color: textColor }}>
+          Groups
         </h2>
       </div>
 
       {/* Search */}
       <div className="fade-up delay-2 mb-8">
-        <div className="flex items-center gap-3 border-b border-brown/15 pb-3 focus-within:border-brown/40 transition-colors duration-200">
-          <span className="text-brown/25 text-base leading-none">⌕</span>
+        <div
+          className="flex items-center gap-3 border-b pb-3 transition-colors duration-200"
+          style={{ borderColor: dividerColor }}
+        >
+          <span className="text-base leading-none" style={{ color: subTextColor }}>⌕</span>
           <input
             ref={inputRef}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search your name..."
-            className="flex-1 bg-transparent text-[13px] text-brown outline-none placeholder:text-brown/25"
+            className="flex-1 bg-transparent text-[13px] outline-none"
+            style={{ color: textColor }}
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="text-brown/25 text-xs hover:text-brown/50 transition-colors"
+              className="text-xs transition-colors"
+              style={{ color: subTextColor }}
             >
               ✕
             </button>
           )}
         </div>
         {search.trim() && (
-          <p className="text-[10px] text-brown/25 mt-2">
-            {filtered.length === 0
-              ? "No results"
-              : `${filtered.length} group${filtered.length !== 1 ? "s" : ""}`}
+          <p className="text-[10px] mt-2" style={{ color: subTextColor }}>
+            {filtered.length === 0 ? "No results" : `${filtered.length} group${filtered.length !== 1 ? "s" : ""}`}
           </p>
         )}
       </div>
@@ -129,27 +140,26 @@ export default function GroupsTab({ eventId }: { eventId: string }) {
         {filtered.map((group) => {
           const isOpen = open === group.name;
           return (
-            <div key={group.name} className="border-b border-brown/[0.07] last:border-0">
+            <div key={group.name} className="border-b last:border-0" style={{ borderColor: dividerColor }}>
               <button
                 onClick={() => setOpen(isOpen ? null : group.name)}
                 className="w-full flex items-center justify-between py-[13px] text-left gap-4"
               >
                 <div className="flex items-baseline gap-3 min-w-0">
-                  <span className="text-[13px] text-brown shrink-0">
+                  <span className="text-[13px] shrink-0" style={{ color: textColor }}>
                     {hl(group.name)}
                   </span>
-                  <span className="text-[10px] text-brown/30 truncate">
+                  <span className="text-[10px] truncate" style={{ color: subTextColor }}>
                     {hl(group.leader)}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[10px] text-brown/22">
+                  <span className="text-[10px]" style={{ color: subTextColor }}>
                     {group.members.length}
                   </span>
                   <span
-                    className={`text-[10px] text-brown/22 transition-transform duration-200 inline-block ${
-                      isOpen ? "rotate-180" : ""
-                    }`}
+                    className={`text-[10px] transition-transform duration-200 inline-block ${isOpen ? "rotate-180" : ""}`}
+                    style={{ color: subTextColor }}
                   >
                     ↓
                   </span>
@@ -158,12 +168,12 @@ export default function GroupsTab({ eventId }: { eventId: string }) {
 
               {isOpen && (
                 <div className="pb-5">
-                  <p className="text-[9px] tracking-widest2 uppercase text-brown/25 mb-3">
+                  <p className="text-[9px] tracking-widest uppercase mb-3" style={{ color: subTextColor }}>
                     Members
                   </p>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     {group.members.map((member) => (
-                      <span key={member} className="text-[12px] text-brown/55 font-light">
+                      <span key={member} className="text-[12px] font-light" style={{ color: memberColor }}>
                         {hl(member)}
                       </span>
                     ))}
@@ -176,7 +186,7 @@ export default function GroupsTab({ eventId }: { eventId: string }) {
 
         {filtered.length === 0 && search && (
           <div className="py-14 text-center">
-            <p className="text-[12px] text-brown/25">No results for "{search}"</p>
+            <p className="text-[12px]" style={{ color: subTextColor }}>No results for "{search}"</p>
           </div>
         )}
       </div>

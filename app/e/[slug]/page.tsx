@@ -13,6 +13,9 @@ type Event = {
   tagline: string | null;
   access_code: string;
   primary_color: string;
+  theme: string;
+  font: string;
+  tabs: { key: string; label: string; visible: boolean }[];
 }
 
 type Announcement = {
@@ -30,15 +33,15 @@ type Link = {
 type Tab = "schedule" | "groups" | "announcements" | "links"
 
 export default function EventPage() {
-  const [event, setEvent]               = useState<Event | null>(null);
+  const [event, setEvent] = useState<Event | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [links, setLinks]               = useState<Link[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [notFound, setNotFound]         = useState(false);
-  const [accessCode, setAccessCode]     = useState("");
+  const [links, setLinks] = useState<Link[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
-  const [error, setError]               = useState("");
-  const [tab, setTab]                   = useState<Tab>("schedule");
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState<Tab>("schedule");
   const { slug } = useParams();
   const supabase = createClient();
 
@@ -142,37 +145,62 @@ export default function EventPage() {
   )
 
   // Main event app
-  return (
-    <div className="max-w-lg mx-auto min-h-screen relative">
-      <main>
-        {tab === "schedule" && <ScheduleTab eventId={event.id} />}
-        {tab === "groups" && <GroupsTab eventId={event.id} />}
+  // Main event app
+  const fontFamily = event.font === 'serif'
+    ? 'Georgia, serif'
+    : event.font === 'mono'
+      ? 'monospace'
+      : 'inherit'
 
+  const visibleTabs = event.tabs.filter((t) => t.visible)
+
+  return (
+    <div
+      className="max-w-lg mx-auto min-h-screen relative"
+      style={{
+        '--primary': event.primary_color,
+        '--bg': event.theme === 'dark' ? '#1a1a1a' : '#f5f0eb',
+        '--text': event.theme === 'dark' ? '#f5f0eb' : '#2c1a0e',
+        fontFamily,
+        background: event.theme === 'dark' ? '#1a1a1a' : '#f5f0eb',
+        color: event.theme === 'dark' ? '#f5f0eb' : '#2c1a0e',
+      } as React.CSSProperties}
+    >
+      <main>
+        {tab === "schedule" && (
+          <ScheduleTab eventId={event.id} primaryColor={event.primary_color} theme={event.theme} />
+        )}
+        {tab === "groups" && (
+          <GroupsTab eventId={event.id} primaryColor={event.primary_color} theme={event.theme} />
+        )}
         {tab === "announcements" && (
           <div className="px-6 pt-12 pb-28">
-            <p className="text-[10px] tracking-widest uppercase text-brown/30 mb-1">Event</p>
-            <h2 className="text-[28px] font-medium tracking-tight text-brown mb-6">Updates</h2>
+            <p className="text-[10px] tracking-widest uppercase mb-1" style={{ color: 'var(--text)', opacity: 0.3 }}>Event</p>
+            <h2 className="text-[28px] font-medium tracking-tight mb-6" style={{ color: 'var(--text)' }}>
+              {visibleTabs.find(t => t.key === 'announcements')?.label ?? 'Updates'}
+            </h2>
             {announcements.length === 0 ? (
-              <p className="text-sm text-brown/30">No announcements yet.</p>
+              <p className="text-sm" style={{ color: 'var(--text)', opacity: 0.3 }}>No announcements yet.</p>
             ) : (
               <div className="flex flex-col gap-3">
                 {announcements.map((a) => (
-                  <div key={a.id} className="border border-brown/10 rounded-xl px-4 py-3">
-                    <p className="text-[13px] text-brown leading-relaxed">{a.body}</p>
-                    <p className="text-[10px] text-brown/30 mt-2">{formatDate(a.created_at)}</p>
+                  <div key={a.id} className="border rounded-xl px-4 py-3" style={{ borderColor: 'var(--text)', opacity: 0.1 }}>
+                    <p className="text-[13px] leading-relaxed" style={{ color: 'var(--text)' }}>{a.body}</p>
+                    <p className="text-[10px] mt-2" style={{ color: 'var(--text)', opacity: 0.4 }}>{formatDate(a.created_at)}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
         )}
-
         {tab === "links" && (
           <div className="px-6 pt-12 pb-28">
-            <p className="text-[10px] tracking-widest uppercase text-brown/30 mb-1">Event</p>
-            <h2 className="text-[28px] font-medium tracking-tight text-brown mb-6">Links</h2>
+            <p className="text-[10px] tracking-widest uppercase mb-1" style={{ color: 'var(--text)', opacity: 0.3 }}>Event</p>
+            <h2 className="text-[28px] font-medium tracking-tight mb-6" style={{ color: 'var(--text)' }}>
+              {visibleTabs.find(t => t.key === 'links')?.label ?? 'Links'}
+            </h2>
             {links.length === 0 ? (
-              <p className="text-sm text-brown/30">No links yet.</p>
+              <p className="text-sm" style={{ color: 'var(--text)', opacity: 0.3 }}>No links yet.</p>
             ) : (
               <div className="flex flex-col gap-3">
                 {links.map((link) => (
@@ -181,10 +209,11 @@ export default function EventPage() {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between border border-brown/10 rounded-xl px-4 py-3 hover:border-brown/25 transition-colors"
+                    className="flex items-center justify-between rounded-xl px-4 py-3 transition-colors"
+                    style={{ border: `1px solid ${event.primary_color}`, color: 'var(--text)' }}
                   >
-                    <span className="text-[13px] font-medium text-brown">{link.label}</span>
-                    <span className="text-brown/30 text-sm">→</span>
+                    <span className="text-[13px] font-medium">{link.label}</span>
+                    <span style={{ color: event.primary_color }}>→</span>
                   </a>
                 ))}
               </div>
@@ -194,15 +223,26 @@ export default function EventPage() {
       </main>
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto border-t border-brown/10 bg-paper/95 backdrop-blur-sm px-6 py-3 flex justify-around">
-        {(["schedule", "groups", "announcements", "links"] as Tab[]).map((t) => (
+      <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto border-t backdrop-blur-sm px-6 py-3 flex justify-around"
+        style={{
+          borderColor: event.theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(44,26,14,0.1)',
+          background: event.theme === 'dark' ? 'rgba(26,26,26,0.95)' : 'rgba(245,240,235,0.95)',
+        }}
+      >
+        {visibleTabs.map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={t.key}
+            onClick={() => setTab(t.key as Tab)}
             className="flex flex-col items-center gap-1 transition-colors"
           >
-            <span className={`text-[10px] uppercase tracking-widest capitalize ${tab === t ? "text-brown font-medium" : "text-brown/30"}`}>
-              {t}
+            <span
+              className="text-[10px] uppercase tracking-widest"
+              style={{
+                color: tab === t.key ? event.primary_color : event.theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(44,26,14,0.3)',
+                fontWeight: tab === t.key ? 600 : 400,
+              }}
+            >
+              {t.label}
             </span>
           </button>
         ))}
