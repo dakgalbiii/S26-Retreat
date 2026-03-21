@@ -2,8 +2,8 @@ import { config } from 'dotenv'
 config({ path: '.env.local' })
 
 import { createClient } from '@supabase/supabase-js'
-import { groups } from '../app/lib/groups'
-import { schedule } from '../app/lib/schedule'
+import { groups } from '../lib/groups'
+import { schedule } from '../lib/schedule'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -55,7 +55,7 @@ function Nav() {
       </span>
       <div className="flex items-center gap-3">
         <button
-          onClick={() => router.push("/dashboard/login")}
+          onClick={() => router.push("/login")}
           className="px-4 py-2 text-[14px] rounded-xl transition-opacity hover:opacity-60"
           style={{ color: "rgba(0,0,0,0.5)" }}
         >
@@ -63,7 +63,7 @@ function Nav() {
         </button>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => router.push("/dashboard/signup")}
+          onClick={() => router.push("/signup")}
           className="px-4 py-2 text-[14px] font-medium rounded-xl transition-opacity hover:opacity-80"
           style={{ background: "#171717", color: "#fff" }}
         >
@@ -168,7 +168,7 @@ export default function LandingPage() {
         >
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={() => router.push("/dashboard/signup")}
+            onClick={() => router.push("/signup")}
             className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-medium transition-opacity hover:opacity-80"
             style={{ background: "#171717", color: "#fff" }}
           >
@@ -176,7 +176,7 @@ export default function LandingPage() {
             <ArrowRight size={15} />
           </motion.button>
           <button
-            onClick={() => router.push("/dashboard/login")}
+            onClick={() => router.push("/login")}
             className="px-6 py-3.5 rounded-xl text-[15px] transition-opacity hover:opacity-60"
             style={{ color: "rgba(0,0,0,0.45)", border: "1px solid rgba(0,0,0,0.1)" }}
           >
@@ -445,7 +445,7 @@ export default function LandingPage() {
 
                   <motion.button
                     whileTap={{ scale: 0.97 }}
-                    onClick={() => !plan.primary && router.push("/dashboard/signup")}
+                    onClick={() => !plan.primary && router.push("/signup")}
                     disabled={plan.primary}
                     className="w-full py-3 rounded-xl text-[14px] font-medium transition-opacity hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{
@@ -478,7 +478,7 @@ export default function LandingPage() {
           </p>
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={() => router.push("/dashboard/signup")}
+            onClick={() => router.push("/signup")}
             className="inline-flex items-center gap-2 px-7 py-4 rounded-xl text-[16px] font-medium transition-opacity hover:opacity-80"
             style={{ background: "#171717", color: "#fff" }}
           >
